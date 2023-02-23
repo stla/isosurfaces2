@@ -177,12 +177,12 @@ idle anim delay save snapshots phase = do
   s        <- get save
   when a $ do
     d <- get delay
-    when (s && ppmExists && snapshot < 180) $ do
+    when (s && ppmExists && snapshot < 120) $ do
       let ppm = printf "ppm/pic%04d.ppm" snapshot
       (>>=) capturePPM (B.writeFile ppm)
       print snapshot
       snapshots $~! (+ 1)
-    phase $~! (+ (pi / 180))
+    phase $~! (+ (pi / 120))
     _ <- threadDelay d
     postRedisplay Nothing
 

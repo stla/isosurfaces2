@@ -1,6 +1,15 @@
 command <- "mogrify -format png *.ppm"
 system(command)
 
+
+# k <- 91L
+# for(i in 89:0) {
+#   png_in  <- sprintf("pic%04d.png", i)
+#   png_out <- sprintf("pic%04d.png", k)
+#   file.copy(png_in, png_out)
+#   k <- k + 1L
+# }
+
 # command <- "convert -delay 1x16 -layers Optimize -fuzz 4% *.png anim.gif"
 # system(command)
 
