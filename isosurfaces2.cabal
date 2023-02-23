@@ -1,0 +1,50 @@
+name:                isosurfaces2
+version:             0.1.0.0
+synopsis:            Some isosurfaces
+description:         Gallery of isosurfaces with Haskell OpenGL.
+homepage:            https://github.com/stla/isosurfaces2#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Stéphane Laurent
+maintainer:          laurent_step@outlook.fr
+copyright:           2023 Stéphane Laurent
+category:            Graphics
+build-type:          Simple
+extra-source-files:  README.md
+                     CHANGELOG.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     OpenGL.Bretzel
+  other-modules:       Colors.Palettes
+                     , Colors.ColorRamp
+  build-depends:       base >= 4.7 && < 5
+                     , marching-cubes2 >= 0.1.0.0
+                     , vector >= 0.12.3.1
+                     , containers >= 0.6.4.1
+                     , OpenGL >= 3.0.3.0
+                     , GLUT >= 2.7.0.16
+                     , numeric-tools >= 0.2.0.1
+                     , vector-th-unbox >= 0.2.2
+                     , gl-capture >= 0.1.0.0
+                     , directory >= 1.3.6.0
+                     , bytestring >= 0.10.12.0
+  other-extensions:    MultiParamTypeClasses
+                     , ScopedTypeVariables
+                     , TemplateHaskell
+                     , TypeFamilies
+  default-language:    Haskell2010
+  ghc-options:         -Wall
+                       -Wcompat
+                       -Widentities
+                       -Wincomplete-record-updates
+                       -Wincomplete-uni-patterns
+                       -Wmissing-export-lists
+                       -Wmissing-home-modules
+                       -Wpartial-fields
+                       -Wredundant-constraints
+
+source-repository head
+  type:     git
+  location: https://github.com/stla/isosurfaces2
