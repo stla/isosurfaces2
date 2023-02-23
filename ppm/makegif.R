@@ -12,7 +12,7 @@ gifski(
   png_files = pngFiles,
   gif_file  = "anim.gif",
   width = 512, height = 512,
-  delay = 1/16
+  delay = 1/13
 )
 
 file.remove(pngFiles)

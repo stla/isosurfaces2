@@ -9,3 +9,5 @@
 
 Some isosurfaces using the [marching-cubes2](https://github.com/stla/marching-cubes2) library.
 
+![](gallery/mandelbulb.gif)
+

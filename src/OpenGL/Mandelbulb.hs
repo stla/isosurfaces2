@@ -223,7 +223,7 @@ main = do
   snapshots <- newIORef 0
   keyboardCallback $= Just (keyboard rot1 rot2 rot3 zoom anim delay save)
   idleCallback $= Just (idle anim delay save snapshots rot3)
-  putStrLn "*** Bretzel ***\n\
+  putStrLn "*** Mandelbulb ***\n\
         \    To quit, press q.\n\
         \    Scene rotation:\n\
         \        e, r, t, y, u, i\n\
