@@ -1,4 +1,4 @@
-module OpenGL.Mandelbulb
+module OpenGL.Pilz
   ( main )
   where
 import           Colors.ColorRamp
@@ -6,7 +6,7 @@ import           Control.Concurrent             ( threadDelay )
 import           Control.Monad                  ( when )
 import qualified Data.ByteString               as B
 import           Data.IORef
-import           Data.Vector.Unboxed            ( (!) )
+import           Data.Vector.Unboxed            ( Vector, (!) )
 import qualified Data.Vector.Unboxed           as V
 import           Graphics.Rendering.OpenGL.Capture
                                                 ( capturePPM )
@@ -24,18 +24,25 @@ type Color = Color4 GLfloat
 type Triangles = 
   [((XYZ F, XYZ F, XYZ F), (XYZ F, XYZ F, XYZ F), (Color, Color, Color))]
 
+makeNormals :: Vector (XYZ F) -> (XYZ F -> XYZ F) -> Vector (XYZ F)
+makeNormals vrtcs gradient =  V.map (normaliz . gradient) vrtcs
+  where
+    normaliz (x, y, z) = (x / nrm, y / nrm, z / nrm)
+      where
+        nrm = sqrt (x*x + y*y + z*z)
+
 funColor :: F -> F -> F -> Color
 funColor dmin dmax d = clrs !! j
  where
   clrs = colorRamp "inferno" 256
   j    = floor ((d - dmin) * 255 / (dmax - dmin))
 
-fromVoxel :: Voxel F -> F -> IO Triangles
-fromVoxel vox isolevel = do 
+fromVoxel :: Voxel F -> F -> (XYZ F -> XYZ F) -> IO Triangles
+fromVoxel vox isolevel gradient = do 
   mesh <- makeMesh vox isolevel
   let vertices = _vertices mesh
       faces    = _faces mesh
-      normals  = _normals mesh
+      normals  = makeNormals vertices gradient
       ds   = V.map (\(x, y, z) -> sqrt (x * x + y * y + z * z)) vertices
       dmin = V.minimum ds
       dmax = V.maximum ds
@@ -64,32 +71,35 @@ white   = Color4 1 1 1 1
 black   = Color4 0 0 0 1
 discord = Color4 0.21 0.22 0.25 1
 
-fun :: XYZ F -> F
-fun p0@(x0,y0,z0) = go 10 p0 (ssq p0) 1
+fun :: F -> F -> XYZ F -> F
+fun a b (x, y, z) =
+  sqr (sqr (x2 + y2 -1) + z2) 
+    * (sqr (y2 / a / a + sqr (z + b) - 1) + x2) 
+    - a * (1 + a * z2)
   where
-  ssq (x,y,z) = x*x + y*y + z*z
-  go :: Int -> XYZ F -> F -> F -> F
-  go n (x,y,z) r2 dr =
-    if r2 > 4
-      then sqrt r2 * log r2 / dr
-      else
-        let theta = 8 * atan2 (sqrt(x*x + y*y)) z in
-        let phi = 8 * atan2 y x in
-        let r = sqrt r2 in
-        let r7 = r2 * r2 * r2 * r in 
-        let dr' = 8 * r7 * dr + 1 in
-        let r8 = r7*r in
-        let xyz = ( r8 * cos phi * sin theta + x0
-                  , r8 * sin phi * sin theta + y0
-                  , r8 * cos theta + z0) in
-        let r2' = ssq xyz in
-        if n > 1 then go (n-1) xyz r2' dr' else sqrt r2' * log r2' / dr'
+    sqr u = u * u
+    x2 = x * x
+    y2 = y * y
+    z2 = (z - 0.5) * (z - 0.5)
+
+fungradient :: F -> F -> XYZ F -> XYZ F
+fungradient a b (x, y, z) =
+  (
+    (f (x + eps, y, z) - fxyz) / eps
+  , (f (x, y + eps, z) - fxyz) / eps
+  , (f (x, y, z + eps) - fxyz) / eps
+  )
+    where
+      f = fun a b
+      fxyz = f (x, y, z)
+      eps = 0.000001
 
 voxel :: Voxel F
-voxel = makeVoxel fun ((-1.2, 1.2),(-1.2, 1.2),(-1.2, 1.2)) (300, 300, 300)
+voxel = makeVoxel (fun 0.25 (-0.1)) 
+  ((-1.3, 1.3),(-1.1, 1.1),(-1.0, 1.3)) (150, 150, 150)
 
 trianglesIO :: IO Triangles
-trianglesIO = fromVoxel voxel 0.01
+trianglesIO = fromVoxel voxel 0.01 (fungradient 0.25 (-0.1))
 
 display :: Context -> DisplayCallback
 display context = do
@@ -128,7 +138,7 @@ resize zoom s@(Size w h) = do
   matrixMode $= Projection
   loadIdentity
   perspective 45.0 (w'/h') 1.0 100.0
-  lookAt (Vertex3 0 (-3+zoom) 0) (Vertex3 0 0 0) (Vector3 0 0 1)
+  lookAt (Vertex3 0 (-4.3 + zoom) 0) (Vertex3 0 0 0) (Vector3 0 0 1)
   matrixMode $= Modelview 0
   where
     w' = realToFrac w
@@ -191,7 +201,7 @@ idle anim delay save snapshots rot3 = do
 main :: IO ()
 main = do
   _ <- getArgsAndInitialize
-  _ <- createWindow "Mandelbulb"
+  _ <- createWindow "Pilz surface"
   windowSize $= Size 512 512
   initialDisplayMode $= [RGBAMode, DoubleBuffered, WithDepthBuffer]
   clearColor $= discord
@@ -223,7 +233,7 @@ main = do
   snapshots <- newIORef 0
   keyboardCallback $= Just (keyboard rot1 rot2 rot3 zoom anim delay save)
   idleCallback $= Just (idle anim delay save snapshots rot3)
-  putStrLn "*** Mandelbulb ***\n\
+  putStrLn "*** Pilz surface ***\n\
         \    To quit, press q.\n\
         \    Scene rotation:\n\
         \        e, r, t, y, u, i\n\

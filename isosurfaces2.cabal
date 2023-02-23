@@ -20,6 +20,7 @@ library
                      , OpenGL.BretzelSmooth
                      , OpenGL.BretzelColored
                      , OpenGL.Mandelbulb
+                     , OpenGL.Pilz
   other-modules:       Colors.Palettes
                      , Colors.ColorRamp
   build-depends:       base >= 4.7 && < 5
