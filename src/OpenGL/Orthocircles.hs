@@ -73,23 +73,27 @@ fun a b (x, y, z) =
 fungradient :: F -> F -> XYZ F -> XYZ F
 fungradient a b (x, y, z) =
   (
-    -2*a*a*b*x + 2*x*(xy2*xy2+z2)*(zx2*zx2+y2) 
-      + 4*x*zx2*(xy2*xy2+z2)*(yz2*yz2+x2) 
-      + 4*x*xy2*(zx2*zx2+y2)*(yz2*yz2+x2),
-    -2*a*a*b*y + 2*y*(xy2*xy2+z2)*(yz2*yz2+x2) 
-      + 4*y*yz2*(xy2*xy2+z2)*(zx2*zx2+y2) 
-      + 4*y*xy2*(zx2*zx2+y2)*(yz2*yz2+x2),
-    -2*a*a*b*z + 2*z*(zx2*zx2+y2)*(yz2*yz2+x2) 
-      + 4*z*yz2*(xy2*xy2+z2)*(zx2*zx2+y2) 
-      + 4*z*zx2*(xy2*xy2+z2)*(yz2*yz2+x2)
+    -2 * a2 * b * x + 2 * x * xxz * zzy 
+      + 4 * x * zx2 * xxz * yyx 
+      + 4 * x * xy2 * zzy * yyx,
+    -2 * a2 * b * y + 2 * y * xxz * yyx 
+      + 4 * y * yz2 * xxz * zzy 
+      + 4 * y * xy2 * zzy * yyx,
+    -2 * a2 * b * z + 2 * z * zzy * yyx 
+      + 4 * z * yz2 * xxz * zzy 
+      + 4 * z * zx2 * xxz * yyx
   )
   where
+    a2 = a * a
     x2 = x * x
     y2 = y * y
     z2 = z * z
     xy2 = x2 + y2 - 1
     yz2 = y2 + z2 - 1
     zx2 = z2 + x2 - 1
+    xxz = xy2 * xy2 + z2
+    yyx = yz2 * yz2 + x2
+    zzy = zx2 * zx2 + y2
 
 aa, bb :: F
 aa = 0.075
