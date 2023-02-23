@@ -1,4 +1,4 @@
-module OpenGL.BretzelColored
+module OpenGL.Mandelbulb
   ( main )
   where
 import           Colors.ColorRamp
@@ -6,42 +6,36 @@ import           Control.Concurrent             ( threadDelay )
 import           Control.Monad                  ( when )
 import qualified Data.ByteString               as B
 import           Data.IORef
-import           Data.Vector.Unboxed            ( Vector, (!) )
+import           Data.Vector.Unboxed            ( (!) )
 import qualified Data.Vector.Unboxed           as V
 import           Graphics.Rendering.OpenGL.Capture
                                                 ( capturePPM )
 import           Graphics.Rendering.OpenGL.GL
                                          hiding ( Color )
 import           Graphics.UI.GLUT        hiding ( Color )
-import           MarchingCubes                  -- ( XYZ, Voxel, Mesh, makeVoxel, makeMesh )
+import           MarchingCubes                  -- ( XYZ, Voxel, Mesh (..), makeVoxel, makeMesh )
 import           System.Directory               ( doesDirectoryExist )
 import           System.IO.Unsafe               ( unsafePerformIO )
 import           Text.Printf                    ( printf )
+
 
 type F = Double
 type Color = Color4 GLfloat
 type Triangles = 
   [((XYZ F, XYZ F, XYZ F), (XYZ F, XYZ F, XYZ F), (Color, Color, Color))]
 
-makeNormals :: Vector (XYZ F) -> (XYZ F -> XYZ F) -> Vector (XYZ F)
-makeNormals vrtcs gradient =  V.map (normaliz . gradient) vrtcs
-  where
-    normaliz (x, y, z) = (x / nrm, y / nrm, z / nrm)
-      where
-        nrm = sqrt (x*x + y*y + z*z)
-
 funColor :: F -> F -> F -> Color
 funColor dmin dmax d = clrs !! j
  where
-  clrs = colorRamp "klingon" 256
+  clrs = colorRamp "inferno" 256
   j    = floor ((d - dmin) * 255 / (dmax - dmin))
 
-fromVoxel :: Voxel F -> (XYZ F -> XYZ F) -> IO Triangles
-fromVoxel vox gradient = do 
-  mesh <- makeMesh vox 0.1
+fromVoxel :: Voxel F -> F -> IO Triangles
+fromVoxel vox isolevel = do 
+  mesh <- makeMesh vox isolevel
   let vertices = _vertices mesh
       faces    = _faces mesh
-      normals  = makeNormals vertices gradient
+      normals  = _normals mesh
       ds   = V.map (\(x, y, z) -> sqrt (x * x + y * y + z * z)) vertices
       dmin = V.minimum ds
       dmax = V.maximum ds
@@ -71,29 +65,31 @@ black   = Color4 0 0 0 1
 discord = Color4 0.21 0.22 0.25 1
 
 fun :: XYZ F -> F
-fun (x,y,z) = sqr ((x2 + y2/4 - 1) * (x2/4 + y2 - 1)) + z2
+fun p0@(x0,y0,z0) = go 10 p0 (ssq p0) 1
   where
-    sqr u = u*u
-    x2 = x*x
-    y2 = y*y
-    z2 = z*z
-
-fungradient :: XYZ F -> XYZ F
-fungradient (x,y,z) = 
-  ( 
-    1/64 * x * (4*x2 + y2 - 4) * (x2 + 4*y2 - 4) * (8*x2 + 16*y2 - 16),
-    1/64 * y * (4*x2 + y2 - 4) * (x2 + 4*y2 - 4) * (16*x2 + 8*y2 - 16),
-    2 * z
-  )
-  where
-    x2 = x*x
-    y2 = y*y
+  ssq (x,y,z) = x*x + y*y + z*z
+  go :: Int -> XYZ F -> F -> F -> F
+  go n (x,y,z) r2 dr =
+    if r2 > 4
+      then sqrt r2 * log r2 / dr
+      else
+        let theta = 8 * atan2 (sqrt(x*x + y*y)) z in
+        let phi = 8 * atan2 y x in
+        let r = sqrt r2 in
+        let r7 = r2 * r2 * r2 * r in 
+        let dr' = 8 * r7 * dr + 1 in
+        let r8 = r7*r in
+        let xyz = ( r8 * cos phi * sin theta + x0
+                  , r8 * sin phi * sin theta + y0
+                  , r8 * cos theta + z0) in
+        let r2' = ssq xyz in
+        if n > 1 then go (n-1) xyz r2' dr' else sqrt r2' * log r2' / dr'
 
 voxel :: Voxel F
-voxel = makeVoxel fun ((-2.2, 2.2),(-2.2, 2.2),(-0.4, 0.4)) (150, 150, 50)
+voxel = makeVoxel fun ((-1.2, 1.2),(-1.2, 1.2),(-1.2, 1.2)) (300, 300, 300)
 
 trianglesIO :: IO Triangles
-trianglesIO = fromVoxel voxel fungradient
+trianglesIO = fromVoxel voxel 0.01
 
 display :: Context -> DisplayCallback
 display context = do
@@ -132,7 +128,7 @@ resize zoom s@(Size w h) = do
   matrixMode $= Projection
   loadIdentity
   perspective 45.0 (w'/h') 1.0 100.0
-  lookAt (Vertex3 0 0 (-6+zoom)) (Vertex3 0 0 0) (Vector3 0 1 0)
+  lookAt (Vertex3 0 (-3+zoom) 0) (Vertex3 0 0 0) (Vector3 0 0 1)
   matrixMode $= Modelview 0
   where
     w' = realToFrac w
@@ -203,7 +199,7 @@ main = do
   lighting $= Enabled
   lightModelTwoSide $= Enabled
   light (Light 0) $= Enabled
-  position (Light 0) $= Vertex4 0 0 (-100) 1
+  position (Light 0) $= Vertex4 0 (-100) 0 1
   ambient (Light 0) $= black
   diffuse (Light 0) $= white
   specular (Light 0) $= white

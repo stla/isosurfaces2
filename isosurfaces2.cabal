@@ -19,6 +19,7 @@ library
   exposed-modules:     OpenGL.Bretzel
                      , OpenGL.BretzelSmooth
                      , OpenGL.BretzelColored
+                     , OpenGL.Mandelbulb
   other-modules:       Colors.Palettes
                      , Colors.ColorRamp
   build-depends:       base >= 4.7 && < 5
