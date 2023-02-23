@@ -1,0 +1,40 @@
+name: Stack-nightly-linux
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install libgl
+        run: |
+          sudo apt-get install --yes libgl-dev
+
+      - name: Install mesa-utils
+        run: |
+          sudo apt-get install --yes mesa-utils
+
+      - name: Install freeglut3
+        run: |
+          sudo apt-get install --yes freeglut3-dev
+
+      - uses: freckle/stack-action@v3
+
+      - id: stack
+        uses: freckle/stack-action@v3
+        with:
+          stack-arguments: --resolver nightly --copy-bins --coverage
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report
+          path: ${{ steps.stack.outputs.local-hpc-root }}
