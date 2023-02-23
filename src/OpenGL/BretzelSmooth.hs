@@ -1,11 +1,12 @@
-module OpenGL.Bretzel
+module OpenGL.BretzelSmooth
   ( main )
   where
 import           Control.Concurrent             ( threadDelay )
 import           Control.Monad                  ( when )
 import qualified Data.ByteString               as B
 import           Data.IORef
-import           Data.Vector.Unboxed            ( (!) )
+import           Data.Vector.Unboxed            ( Vector, (!) )
+import qualified Data.Vector.Unboxed           as V
 import           Graphics.Rendering.OpenGL.Capture
                                                 ( capturePPM )
 import           Graphics.Rendering.OpenGL.GL
@@ -19,12 +20,19 @@ import           Text.Printf
 type F = Double
 type Triangles = [((XYZ F, XYZ F, XYZ F), (XYZ F, XYZ F, XYZ F))]
 
-fromVoxel :: Voxel F -> IO Triangles
-fromVoxel vox = do 
+makeNormals :: Vector (XYZ F) -> (XYZ F -> XYZ F) -> Vector (XYZ F)
+makeNormals vrtcs gradient =  V.map (normaliz . gradient) vrtcs
+  where
+    normaliz (x, y, z) = (x / nrm, y / nrm, z / nrm)
+      where
+        nrm = sqrt (x*x + y*y + z*z)
+
+fromVoxel :: Voxel F -> (XYZ F -> XYZ F) -> IO Triangles
+fromVoxel vox gradient = do 
   mesh <- makeMesh vox 0.1
   let vertices = _vertices mesh
       faces    = _faces mesh
-      normals  = _normals mesh
+      normals  = makeNormals vertices gradient
       triangle face =
         ( (vertices ! i, vertices ! j, vertices ! k)
         , (normals ! i , normals ! j , normals ! k)
@@ -43,25 +51,35 @@ data Context = Context
     , contextTriangles :: IORef Triangles
     }
 
-white, black, red :: Color4 GLfloat
-white = Color4 1 1 1 1
-black = Color4 0 0 0 1
-red   = Color4 1 0 0 1
+white, black, darkred :: Color4 GLfloat
+white   = Color4 1 1 1 1
+black   = Color4 0 0 0 1
+darkred = Color4 (139/255) 0 0 1
 
-fBretz :: XYZ F -> F
-fBretz (x,y,z) = sqr ((x2 + y2/4 - 1) * (x2/4 + y2 - 1)) + z2
+fun :: XYZ F -> F
+fun (x,y,z) = sqr ((x2 + y2/4 - 1) * (x2/4 + y2 - 1)) + z2
   where
-  sqr u = u*u
-  x2 = x*x
-  y2 = y*y
-  z2 = z*z
+    sqr u = u*u
+    x2 = x*x
+    y2 = y*y
+    z2 = z*z
+
+fungradient :: XYZ F -> XYZ F
+fungradient (x,y,z) = 
+  ( 
+    1/64 * x * (4*x2 + y2 - 4) * (x2 + 4*y2 - 4) * (8*x2 + 16*y2 - 16),
+    1/64 * y * (4*x2 + y2 - 4) * (x2 + 4*y2 - 4) * (16*x2 + 8*y2 - 16),
+    2 * z
+  )
+  where
+    x2 = x*x
+    y2 = y*y
 
 voxel :: Voxel F
-voxel = makeVoxel fBretz ((-2.2, 2.2),(-2.2, 2.2),(-0.4, 0.4))
-                         (300, 300, 100)
+voxel = makeVoxel fun ((-2.2, 2.2),(-2.2, 2.2),(-0.4, 0.4)) (150, 150, 50)
 
 trianglesIO :: IO Triangles
-trianglesIO = fromVoxel voxel
+trianglesIO = fromVoxel voxel fungradient
 
 display :: Context -> DisplayCallback
 display context = do
@@ -81,14 +99,14 @@ display context = do
   swapBuffers
   where
   drawTriangle ((v1, v2, v3), (n1, n2, n3)) = do
-      materialDiffuse Front $= red
-      normal (toNormal n1)
-      vertex (toVertex v1)
-      normal (toNormal n2)
-      vertex (toVertex v2)
-      normal (toNormal n3)
-      vertex (toVertex v3)
-     where
+    materialDiffuse Front $= darkred
+    normal (toNormal n1)
+    vertex (toVertex v1)
+    normal (toNormal n2)
+    vertex (toVertex v2)
+    normal (toNormal n3)
+    vertex (toVertex v3)
+    where
       toNormal (x, y, z) = Normal3 x y z
       toVertex (x, y, z) = Vertex3 x y z
 
