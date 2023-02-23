@@ -73,18 +73,18 @@ fun a b (x, y, z) =
 fungradient :: F -> F -> XYZ F -> XYZ F
 fungradient a b (x, y, z) =
   (
-    -2 * a2 * b * x + 2 * x * xxz * zzy 
+    -2 * a2b * x + 2 * x * xxz * zzy 
       + 4 * x * zx2 * xxz * yyx 
       + 4 * x * xy2 * zzy * yyx,
-    -2 * a2 * b * y + 2 * y * xxz * yyx 
+    -2 * a2b * y + 2 * y * yyx * xxz 
       + 4 * y * yz2 * xxz * zzy 
       + 4 * y * xy2 * zzy * yyx,
-    -2 * a2 * b * z + 2 * z * zzy * yyx 
+    -2 * a2b * z + 2 * z * zzy * yyx 
       + 4 * z * yz2 * xxz * zzy 
       + 4 * z * zx2 * xxz * yyx
   )
   where
-    a2 = a * a
+    a2b = a * a * b
     x2 = x * x
     y2 = y * y
     z2 = z * z

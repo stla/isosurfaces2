@@ -1,7 +1,6 @@
-module OpenGL.Pretzel
+module OpenGL.ICN5D
   ( main )
   where
-import           Colors.ColorRamp
 import           Control.Concurrent             ( threadDelay )
 import           Control.Monad                  ( when )
 import qualified Data.ByteString               as B
@@ -20,9 +19,7 @@ import           Text.Printf                    ( printf )
 
 
 type F = Double
-type Color = Color4 GLfloat
-type Triangles = 
-  [((XYZ F, XYZ F, XYZ F), (XYZ F, XYZ F, XYZ F), (Color, Color, Color))]
+type Triangles = [((XYZ F, XYZ F, XYZ F), (XYZ F, XYZ F, XYZ F))]
 
 makeNormals :: Vector (XYZ F) -> (XYZ F -> XYZ F) -> Vector (XYZ F)
 makeNormals vrtcs gradient =  V.map (normaliz . gradient) vrtcs
@@ -31,26 +28,15 @@ makeNormals vrtcs gradient =  V.map (normaliz . gradient) vrtcs
       where
         nrm = sqrt (x*x + y*y + z*z)
 
-funColor :: F -> F -> F -> Color
-funColor dmin dmax d = clrs !! j
- where
-  clrs = colorRamp "klingon" 256
-  j    = floor ((d - dmin) * 255 / (dmax - dmin))
-
 fromVoxel :: Voxel F -> F -> (XYZ F -> XYZ F) -> IO Triangles
 fromVoxel vox isolevel gradient = do 
   mesh <- makeMesh vox isolevel
   let vertices = _vertices mesh
       faces    = _faces mesh
       normals  = makeNormals vertices gradient
-      ds   = V.map (\(x, y, z) -> sqrt (x * x + y * y + z * z)) vertices
-      dmin = V.minimum ds
-      dmax = V.maximum ds
-      colors = V.map (funColor dmin dmax) ds
       triangle face =
         ( (vertices ! i, vertices ! j, vertices ! k)
         , (normals ! i , normals ! j , normals ! k )
-        , (colors ! i  , colors ! j  , colors ! k  )
         )
         where
           (i, j, k) = face
@@ -63,42 +49,44 @@ data Context = Context
     , contextRot2      :: IORef GLfloat
     , contextRot3      :: IORef GLfloat
     , contextZoom      :: IORef Double
-    , contextTriangles :: IORef Triangles
+    , contextPhase     :: IORef F
     }
 
-white, black, discord :: Color4 GLfloat
+white, black, fuchsia, discord :: Color4 GLfloat
 white   = Color4 1 1 1 1
 black   = Color4 0 0 0 1
+fuchsia = Color4 1 0 1 1
 discord = Color4 0.21 0.22 0.25 1
 
 fun :: F -> XYZ F -> F
-fun c (x, y, z) =
-  sqr ((sqr (x - c) + y2 - 1) * (sqr (x + c) + y2 - 1) 
-    / (1 + (1 + c)*(x2 + y2))) + (1 + c) * z2
+fun a (x, y, z) = 
+  sq(sqrt(
+    sq(sqrt(sq(sqrt(sq(x*sina) + sq(z*cosa)) - 5) + sq(y*sina)) - 2.5) + 
+      sq(x*cosa)) - 1.25
+  ) + sq(sqrt(sq(sqrt(sq(z*sina) + sq(y*cosa)) - 2.5)) - 1.25)
   where
-    sqr u = u * u
-    x2 = x * x
-    y2 = y * y
-    z2 = z * z
+    sq u = u * u
+    sina = sin a
+    cosa = cos a
 
 fungradient :: F -> XYZ F -> XYZ F
-fungradient c (x, y, z) =
+fungradient a (x, y, z) =
   (
     (f (x + eps, y, z) - fxyz) / eps
   , (f (x, y + eps, z) - fxyz) / eps
   , (f (x, y, z + eps) - fxyz) / eps
   )
     where
-      f = fun c
+      f = fun a
       fxyz = f (x, y, z)
       eps = 0.000001
 
-voxel :: Voxel F
-voxel = makeVoxel (fun (1.3)) 
-  ((-2.8, 2.8), (-1.6, 1.6), (-0.7, 0.7)) (150, 150, 150)
+voxel :: F -> Voxel F
+voxel a = makeVoxel (fun a) 
+  ((-10, 10), (-10, 10), (-10, 10)) (200, 200, 200)
 
-trianglesIO :: IO Triangles
-trianglesIO = fromVoxel voxel 1 (fungradient (1.3))
+trianglesIO :: F -> IO Triangles
+trianglesIO a = fromVoxel (voxel a) 0.25 (fungradient a)
 
 display :: Context -> DisplayCallback
 display context = do
@@ -106,7 +94,8 @@ display context = do
   r1 <- get (contextRot1 context)
   r2 <- get (contextRot2 context)
   r3 <- get (contextRot3 context)
-  triangles <- get (contextTriangles context)
+  a  <- get (contextPhase context)
+  triangles <- trianglesIO a
   zoom <- get (contextZoom context)
   (_, size) <- get viewport
   loadIdentity
@@ -117,15 +106,13 @@ display context = do
   renderPrimitive Triangles $ mapM_ drawTriangle triangles
   swapBuffers
   where
-  drawTriangle ((v1, v2, v3), (n1, n2, n3), (c1, c2, c3)) = do
+  drawTriangle ((v1, v2, v3), (n1, n2, n3)) = do
+    materialDiffuse Front $= fuchsia
     normal (toNormal n1)
-    materialDiffuse Front $= c1
     vertex (toVertex v1)
     normal (toNormal n2)
-    materialDiffuse Front $= c2
     vertex (toVertex v2)
     normal (toNormal n3)
-    materialDiffuse Front $= c3
     vertex (toVertex v3)
     where
       toNormal (x, y, z) = Normal3 x y z
@@ -137,7 +124,7 @@ resize zoom s@(Size w h) = do
   matrixMode $= Projection
   loadIdentity
   perspective 45.0 (w'/h') 1.0 100.0
-  lookAt (Vertex3 0 (-7.5 + zoom) 0) (Vertex3 0 0 0) (Vector3 0 0 1)
+  lookAt (Vertex3 0 0 (-28 + zoom)) (Vertex3 0 0 0) (Vector3 0 1 0)
   matrixMode $= Modelview 0
   where
     w' = realToFrac w
@@ -148,11 +135,12 @@ keyboard
   -> IORef GLfloat
   -> IORef GLfloat -- rotations
   -> IORef Double  -- zoom
+  -> IORef F       -- phase
   -> IORef Bool    -- animation
   -> IORef Int     -- animation delay
   -> IORef Bool    -- save animation
   -> KeyboardCallback
-keyboard rot1 rot2 rot3 zoom anim delay save c _ = do
+keyboard rot1 rot2 rot3 zoom phase anim delay save c _ = do
   case c of
     'e' -> rot1 $~! subtract 2
     'r' -> rot1 $~! (+ 2)
@@ -162,6 +150,8 @@ keyboard rot1 rot2 rot3 zoom anim delay save c _ = do
     'i' -> rot3 $~! (+ 2)
     'm' -> zoom $~! (+ 0.25)
     'l' -> zoom $~! subtract 0.25
+    'k' -> phase $~! (+ 0.03)
+    'j' -> phase $~! subtract 0.03
     'a' -> anim $~! not
     'o' -> delay $~! (+ 10000)
     'p' -> delay $~! (\d -> if d == 0 then 0 else d - 10000)
@@ -179,9 +169,9 @@ idle
   -> IORef Int
   -> IORef Bool
   -> IORef Int
-  -> IORef GLfloat
+  -> IORef F
   -> IdleCallback
-idle anim delay save snapshots rot3 = do
+idle anim delay save snapshots phase = do
   a        <- get anim
   snapshot <- get snapshots
   s        <- get save
@@ -192,7 +182,7 @@ idle anim delay save snapshots rot3 = do
       (>>=) capturePPM (B.writeFile ppm)
       print snapshot
       snapshots $~! (+ 1)
-    rot3 $~! (+ 2)
+    phase $~! (+ (pi / 180))
     _ <- threadDelay d
     postRedisplay Nothing
 
@@ -200,7 +190,7 @@ idle anim delay save snapshots rot3 = do
 main :: IO ()
 main = do
   _ <- getArgsAndInitialize
-  _ <- createWindow "Pretzel"
+  _ <- createWindow "Toratope"
   windowSize $= Size 512 512
   initialDisplayMode $= [RGBAMode, DoubleBuffered, WithDepthBuffer]
   clearColor $= discord
@@ -208,10 +198,15 @@ main = do
   lighting $= Enabled
   lightModelTwoSide $= Enabled
   light (Light 0) $= Enabled
-  position (Light 0) $= Vertex4 0 (-100) 0 1
+  position (Light 0) $= Vertex4 100 (100) (-100) 1
   ambient (Light 0) $= black
   diffuse (Light 0) $= white
   specular (Light 0) $= white
+  light (Light 1) $= Enabled
+  position (Light 1) $= Vertex4 (-10) (-100) (-100) 1
+  ambient (Light 1) $= black
+  diffuse (Light 1) $= black
+  specular (Light 1) $= black
   depthFunc $= Just Less
   shadeModel $= Smooth
   cullFace $= Just Back
@@ -219,20 +214,20 @@ main = do
   rot2 <- newIORef 0.0
   rot3 <- newIORef 0.0
   zoom <- newIORef 0.0
-  triangles <- newIORef =<< trianglesIO 
-  displayCallback $= display Context {contextRot1 = rot1,
-                                      contextRot2 = rot2,
-                                      contextRot3 = rot3,
-                                      contextZoom = zoom,
-                                      contextTriangles = triangles}
+  phase <- newIORef 0.0
+  displayCallback $= display Context {contextRot1  = rot1,
+                                      contextRot2  = rot2,
+                                      contextRot3  = rot3,
+                                      contextZoom  = zoom,
+                                      contextPhase = phase}
   reshapeCallback $= Just (resize 0)
   anim      <- newIORef False
-  delay     <- newIORef 0
+  delay     <- newIORef 50000
   save      <- newIORef False
   snapshots <- newIORef 0
-  keyboardCallback $= Just (keyboard rot1 rot2 rot3 zoom anim delay save)
-  idleCallback $= Just (idle anim delay save snapshots rot3)
-  putStrLn "*** Pretzel ***\n\
+  keyboardCallback $= Just (keyboard rot1 rot2 rot3 zoom phase anim delay save)
+  idleCallback $= Just (idle anim delay save snapshots phase)
+  putStrLn "*** Toratope ***\n\
         \    To quit, press q.\n\
         \    Scene rotation:\n\
         \        e, r, t, y, u, i\n\

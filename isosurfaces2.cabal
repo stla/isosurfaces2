@@ -19,6 +19,7 @@ library
   exposed-modules:     OpenGL.Bretzel
                      , OpenGL.BretzelSmooth
                      , OpenGL.BretzelColored
+                     , OpenGL.ICN5D
                      , OpenGL.Mandelbulb
                      , OpenGL.Orthocircles
                      , OpenGL.Pilz
