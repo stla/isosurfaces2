@@ -7,3 +7,4 @@ extra-deps:
   - numeric-tools-0.2.0.1
   - gl-capture-0.1.0.0
   - marching-cubes2-0.1.0.0
+  - hspray-0.1.2.0
