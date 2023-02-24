@@ -16,3 +16,5 @@ Some isosurfaces using the [marching-cubes2](https://github.com/stla/marching-cu
 ![](gallery/mandelbulb.gif)
 
 ![](gallery/ICN5D.gif)
+
+![](gallery/KohnNirenberg.gif)
