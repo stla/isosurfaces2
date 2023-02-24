@@ -191,7 +191,7 @@ idle anim delay save snapshots rot3 = do
 main :: IO ()
 main = do
   _ <- getArgsAndInitialize
-  _ <- createWindow "Orthocircles"
+  _ <- createWindow "Kohn-Nirenberg surface"
   windowSize $= Size 512 512
   initialDisplayMode $= [RGBAMode, DoubleBuffered, WithDepthBuffer]
   clearColor $= discord
@@ -223,7 +223,7 @@ main = do
   snapshots <- newIORef 0
   keyboardCallback $= Just (keyboard rot1 rot2 rot3 zoom anim delay save)
   idleCallback $= Just (idle anim delay save snapshots rot3)
-  putStrLn "*** Orthocircles ***\n\
+  putStrLn "*** Kohn-Nirenberg surface ***\n\
         \    To quit, press q.\n\
         \    Scene rotation:\n\
         \        e, r, t, y, u, i\n\
