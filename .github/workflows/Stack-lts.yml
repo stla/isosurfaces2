@@ -17,7 +17,6 @@ jobs:
           - lts       # ghc-9.2 (as of writing)
           - lts-20.11 # ghc-9.2
           - lts-19.33 # ghc-9.0
-          - lts-18.28 # ghc-8.10
 
       fail-fast: false
 
