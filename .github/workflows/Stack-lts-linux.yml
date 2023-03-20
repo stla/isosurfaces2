@@ -49,9 +49,9 @@ jobs:
         run: |
           sudo apt-get install libxxf86vm-dev
 
-      - name: Install libxorg
+      - name: Install xorg
         run: |
-          sudo apt-get install libxorg-dev
+          sudo apt-get install xorg-dev
 
       - uses: freckle/stack-action@v3
 
