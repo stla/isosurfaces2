@@ -43,6 +43,10 @@ jobs:
         run: |
           sudo apt-get install libxxf86vm-dev
 
+      - name: Install libxorg
+        run: |
+          sudo apt-get install libxorg-dev
+
       - uses: freckle/stack-action@v3
 
       - id: stack

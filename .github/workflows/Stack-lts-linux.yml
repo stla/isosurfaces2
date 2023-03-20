@@ -11,7 +11,7 @@ jobs:
       matrix:
         resolver:
           - lts       # ghc-9.2 (as of writing)
-          - lts-20.11 # ghc-9.2
+          - lts-20.15 # ghc-9.2
           - lts-19.33 # ghc-9.0
 
       fail-fast: false
@@ -48,6 +48,10 @@ jobs:
       - name: Install libxxf86vm
         run: |
           sudo apt-get install libxxf86vm-dev
+
+      - name: Install libxorg
+        run: |
+          sudo apt-get install libxorg-dev
 
       - uses: freckle/stack-action@v3
 
