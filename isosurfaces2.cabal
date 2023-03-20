@@ -21,6 +21,7 @@ library
                      , OpenGL.BretzelColored
                      , OpenGL.ICN5D
                      , OpenGL.ICN5D2
+                     , OpenGL.ICN5D3
                      , OpenGL.KohnNirenberg
                      , OpenGL.KohnNirenberg2
                      , OpenGL.Mandelbulb
