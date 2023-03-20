@@ -17,7 +17,7 @@ import qualified Data.Vector.Storable          as VS
 import           Foreign.Ptr                    ( Ptr, plusPtr )
 import           Graphics.UI.GLFW              as GLFW
 import           Graphics.Rendering.OpenGL.GLU.Matrix
-import           Data.Maybe
+import           Data.Maybe                     ( fromJust )
 
 type F = Double
 type Triangles = VS.Vector F

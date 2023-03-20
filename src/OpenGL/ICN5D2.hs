@@ -14,8 +14,8 @@ import           MarchingCubes                  -- ( XYZ, Voxel, Mesh (..), make
 import           System.Directory               ( doesDirectoryExist )
 import           System.IO.Unsafe               ( unsafePerformIO )
 import           Text.Printf                    ( printf )
-import           Foreign.Ptr
-import           Foreign.Marshal.Array
+import           Foreign.Ptr                    ( Ptr, plusPtr )
+import           Foreign.Marshal.Array          ( withArrayLen )
 import           Graphics.UI.GLFW              as GLFW
 import           Graphics.Rendering.OpenGL.GLU.Matrix
 import           Data.Maybe
@@ -132,10 +132,9 @@ keyboard
   -> IORef Double  -- zoom
   -> IORef F       -- phase
   -> IORef Bool    -- animation
-  -> IORef Int     -- animation delay
   -> IORef Bool    -- save animation
   -> CharCallback
-keyboard rot1 rot2 rot3 zoom phase anim delay save window c = do
+keyboard rot1 rot2 rot3 zoom phase anim save window c = do
   case c of
     'e' -> rot1 $~! subtract 2
     'r' -> rot1 $~! (+ 2)
@@ -148,8 +147,6 @@ keyboard rot1 rot2 rot3 zoom phase anim delay save window c = do
     'k' -> phase $~! (+ 0.03)
     'j' -> phase $~! subtract 0.03
     'a' -> anim $~! not
-    'o' -> delay $~! (+ 10000)
-    'p' -> delay $~! (\d -> if d == 0 then 0 else d - 10000)
     's' -> save $~! not
     'q' -> setWindowShouldClose window True
     _   -> return ()
@@ -219,8 +216,7 @@ main = do
   window <- fromJust <$> 
     GLFW.createWindow 512 512 "Toratope" Nothing Nothing
   GLFW.makeContextCurrent (Just window)
-  GLFW.swapInterval 1
-  
+  GLFW.swapInterval 1  
   clearColor $= discord
   materialAmbient Front $= black
   lighting $= Enabled
@@ -249,11 +245,10 @@ main = do
                           contextZoom = zoom,
                           contextPhase = phase }
   anim      <- newIORef False
-  delay     <- newIORef 0
   save      <- newIORef False
   snapshots <- newIORef 0
   setCharCallback 
-    window (Just (keyboard rot1 rot2 rot3 zoom phase anim delay save))
+    window (Just (keyboard rot1 rot2 rot3 zoom phase anim save))
   putStrLn "*** Toratope ***\n\
         \    To quit, press q.\n\
         \    Scene rotation:\n\
