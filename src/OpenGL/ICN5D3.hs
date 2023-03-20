@@ -3,20 +3,28 @@ module OpenGL.ICN5D3
   where
 import           Control.Monad                  ( when, forM_, unless )
 import qualified Data.ByteString               as B
-import           Data.IORef
+import           Data.IORef                     ( IORef, newIORef )
 import           Data.Vector.Unboxed            ( (!) )
 import           Graphics.Rendering.OpenGL.Capture
                                                 ( capturePPM )
-import           Graphics.Rendering.OpenGL.GL
-                                         hiding ( Color )
-import           MarchingCubes                  -- ( XYZ, Voxel, Mesh (..), makeVoxel, makeMesh )
+import           Graphics.Rendering.OpenGL.GL   
+import           MarchingCubes                  ( XYZ
+                                                , Voxel
+                                                , makeVoxel
+                                                , makeMesh
+                                                , Mesh (_vertices, _faces) )
 import           System.Directory               ( doesDirectoryExist )
 import           System.IO.Unsafe               ( unsafePerformIO )
 import           Text.Printf                    ( printf )
 import qualified Data.Vector.Storable          as VS
 import           Foreign.Ptr                    ( Ptr, plusPtr )
-import           Graphics.UI.GLFW              as GLFW
-import           Graphics.Rendering.OpenGL.GLU.Matrix
+import           Graphics.UI.GLFW               ( CharCallback
+                                                , setCharCallback
+                                                , setWindowShouldClose
+                                                , swapBuffers )
+import qualified Graphics.UI.GLFW              as GLFW
+import           Graphics.Rendering.OpenGL.GLU.Matrix 
+                                                ( perspective, lookAt )
 import           Data.Maybe                     ( fromJust )
 
 type F = Double
