@@ -1,8 +1,7 @@
 module OpenGL.ICN5D2
   ( main )
   where
-import           Control.Concurrent             ( threadDelay )
-import           Control.Monad                  ( when, forM_ )
+import           Control.Monad                  ( when, forM_, unless )
 import qualified Data.ByteString               as B
 import           Data.IORef
 import           Data.Vector.Unboxed            ( Vector, (!) )
@@ -11,13 +10,15 @@ import           Graphics.Rendering.OpenGL.Capture
                                                 ( capturePPM )
 import           Graphics.Rendering.OpenGL.GL
                                          hiding ( Color )
-import           Graphics.UI.GLUT        hiding ( Color )
 import           MarchingCubes                  -- ( XYZ, Voxel, Mesh (..), makeVoxel, makeMesh )
 import           System.Directory               ( doesDirectoryExist )
 import           System.IO.Unsafe               ( unsafePerformIO )
 import           Text.Printf                    ( printf )
 import           Foreign.Ptr
 import           Foreign.Marshal.Array
+import           Graphics.UI.GLFW              as GLFW
+import           Graphics.Rendering.OpenGL.GLU.Matrix
+import           Data.Maybe
 
 type F = Double
 type Triangles = (Int, Ptr F)
@@ -42,8 +43,28 @@ fromVoxel vox isolevel gradient = do
         )
         where
           (i, j, k) = face
-      flatten = concatMap $ \(((x1,x2,x3),(x4,x5,x6)),((x7,x8,x9),(x10,x11,x12)),((x13,x14,x15),(x16,x17,x18))) -> 
-        [x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18]
+      flatten = concatMap $ 
+        \(
+          (
+            (x1,  x2,  x3)
+           ,(x4,  x5,  x6)
+          ),
+          (
+            (x7,  x8,  x9)
+           ,(x10, x11, x12)
+          ),
+          (
+            (x13, x14, x15)
+           ,(x16, x17, x18)
+          )
+        ) -> [
+               x1,  x2,  x3
+              ,x4,  x5,  x6
+              ,x7,  x8,  x9
+              ,x10, x11, x12
+              ,x13, x14, x15
+              ,x16, x17, x18
+              ]
   withArrayLen (flatten (map triangle faces)) (\n p -> pure (n, p))
 
 
@@ -92,33 +113,6 @@ voxel a = makeVoxel (fun a)
 trianglesIO :: F -> IO Triangles
 trianglesIO a = fromVoxel (voxel a) 0.25 (fungradient a)
 
-display :: Context -> DisplayCallback
-display context = do
-  clear [ColorBuffer, DepthBuffer]
-  r1 <- get (contextRot1 context)
-  r2 <- get (contextRot2 context)
-  r3 <- get (contextRot3 context)
-  a  <- get (contextPhase context)
-  (n, triangles) <- trianglesIO a
-  zoom <- get (contextZoom context)
-  (_, size) <- get viewport
-  loadIdentity
-  resize zoom size
-  rotate r1 $ Vector3 1 0 0
-  rotate r2 $ Vector3 0 1 0
-  rotate r3 $ Vector3 0 0 1
-  materialDiffuse Front $= fuchsia
-  unsafeRenderPrimitive Triangles $ forM_ [0..n `quot` 18] $ \i -> drawTriangle triangles (i * 18 * 8)
-  swapBuffers
-  where
-  drawTriangle p i = do
-    normalv (plusPtr p (i + 0 * 8) :: Ptr (Normal3 F))
-    vertexv (plusPtr p (i + 3 * 8) :: Ptr (Vertex3 F))
-    normalv (plusPtr p (i + 6 * 8) :: Ptr (Normal3 F))
-    vertexv (plusPtr p (i + 9 * 8) :: Ptr (Vertex3 F))
-    normalv (plusPtr p (i + 12 * 8) :: Ptr (Normal3 F))
-    vertexv (plusPtr p (i + 15 * 8) :: Ptr (Vertex3 F))
-
 resize :: Double -> Size -> IO ()
 resize zoom s@(Size w h) = do
   viewport $= (Position 0 0, s)
@@ -140,8 +134,8 @@ keyboard
   -> IORef Bool    -- animation
   -> IORef Int     -- animation delay
   -> IORef Bool    -- save animation
-  -> KeyboardCallback
-keyboard rot1 rot2 rot3 zoom phase anim delay save c _ = do
+  -> CharCallback
+keyboard rot1 rot2 rot3 zoom phase anim delay save window c = do
   case c of
     'e' -> rot1 $~! subtract 2
     'r' -> rot1 $~! (+ 2)
@@ -157,43 +151,76 @@ keyboard rot1 rot2 rot3 zoom phase anim delay save c _ = do
     'o' -> delay $~! (+ 10000)
     'p' -> delay $~! (\d -> if d == 0 then 0 else d - 10000)
     's' -> save $~! not
-    'q' -> leaveMainLoop
+    'q' -> setWindowShouldClose window True
     _   -> return ()
-  postRedisplay Nothing
 
 ppmExists :: Bool
 {-# NOINLINE ppmExists #-}
 ppmExists = unsafePerformIO $ doesDirectoryExist "./ppm"
 
-idle
-  :: IORef Bool
-  -> IORef Int
-  -> IORef Bool
+
+mainLoop 
+  :: Context 
+  -> GLFW.Window 
+  -> IORef Bool 
+  -> IORef Bool 
   -> IORef Int
   -> IORef F
-  -> IdleCallback
-idle anim delay save snapshots phase = do
+  -> IO ()
+mainLoop context window anim save snapshots phase = do
+
+  r1 <- get (contextRot1 context)
+  r2 <- get (contextRot2 context)
+  r3 <- get (contextRot3 context)
+  ph <- get (contextPhase context)
+  (n, triangles) <- trianglesIO ph
+
+  -- idle callback
   a        <- get anim
   snapshot <- get snapshots
   s        <- get save
   when a $ do
-    d <- get delay
     when (s && ppmExists && snapshot < 120) $ do
       let ppm = printf "ppm/pic%04d.ppm" snapshot
       (>>=) capturePPM (B.writeFile ppm)
       print snapshot
       snapshots $~! (+ 1)
     phase $~! (+ (pi / 120))
-    _ <- threadDelay d
-    postRedisplay Nothing
+  ----
+
+  clear [ColorBuffer, DepthBuffer]
+  zoom <- get (contextZoom context)
+  (_, size) <- get viewport
+  loadIdentity
+  resize zoom size
+  rotate r1 $ Vector3 1 0 0
+  rotate r2 $ Vector3 0 1 0
+  rotate r3 $ Vector3 0 0 1
+  materialDiffuse Front $= fuchsia
+  unsafeRenderPrimitive Triangles $ 
+    forM_ [0..n `quot` 18] $ \i -> drawTriangle triangles (i * 18 * 8)
+  swapBuffers window
+  GLFW.pollEvents
+  b <- GLFW.windowShouldClose window
+  unless b (mainLoop context window anim save snapshots phase)
+  where
+  drawTriangle p i = do
+    normalv (plusPtr p (i + 0 * 8) :: Ptr (Normal3 F))
+    vertexv (plusPtr p (i + 3 * 8) :: Ptr (Vertex3 F))
+    normalv (plusPtr p (i + 6 * 8) :: Ptr (Normal3 F))
+    vertexv (plusPtr p (i + 9 * 8) :: Ptr (Vertex3 F))
+    normalv (plusPtr p (i + 12 * 8) :: Ptr (Normal3 F))
+    vertexv (plusPtr p (i + 15 * 8) :: Ptr (Vertex3 F))
 
 
 main :: IO ()
 main = do
-  _ <- getArgsAndInitialize
-  _ <- createWindow "Toratope"
-  windowSize $= Size 512 512
-  initialDisplayMode $= [RGBAMode, DoubleBuffered, WithDepthBuffer]
+  _ <- GLFW.init
+  window <- fromJust <$> 
+    GLFW.createWindow 512 512 "Toratope" Nothing Nothing
+  GLFW.makeContextCurrent (Just window)
+  GLFW.swapInterval 1
+  
   clearColor $= discord
   materialAmbient Front $= black
   lighting $= Enabled
@@ -216,18 +243,17 @@ main = do
   rot3 <- newIORef 0.0
   zoom <- newIORef 0.0
   phase <- newIORef 0.0
-  displayCallback $= display Context {contextRot1  = rot1,
-                                      contextRot2  = rot2,
-                                      contextRot3  = rot3,
-                                      contextZoom  = zoom,
-                                      contextPhase = phase}
-  reshapeCallback $= Just (resize 0)
+  let context = Context { contextRot1 = rot1,
+                          contextRot2 = rot2,
+                          contextRot3 = rot3,
+                          contextZoom = zoom,
+                          contextPhase = phase }
   anim      <- newIORef False
-  delay     <- newIORef 50000
+  delay     <- newIORef 0
   save      <- newIORef False
   snapshots <- newIORef 0
-  keyboardCallback $= Just (keyboard rot1 rot2 rot3 zoom phase anim delay save)
-  idleCallback $= Just (idle anim delay save snapshots phase)
+  setCharCallback 
+    window (Just (keyboard rot1 rot2 rot3 zoom phase anim delay save))
   putStrLn "*** Toratope ***\n\
         \    To quit, press q.\n\
         \    Scene rotation:\n\
@@ -237,5 +263,4 @@ main = do
         \    Animation speed: o, p\n\
         \    Save animation: s\n\
         \"
-  mainLoop
-
+  mainLoop context window anim save snapshots phase
