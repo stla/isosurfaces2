@@ -83,7 +83,7 @@ fungradient a (x, y, z) =
 
 voxel :: F -> Voxel F
 voxel a = makeVoxel (fun a) 
-  ((-10, 10), (-10, 10), (-10, 10)) (200, 200, 200)
+  ((-11, 11), (-11, 11), (-11, 11)) (200, 200, 200)
 
 trianglesIO :: F -> IO Triangles
 trianglesIO a = fromVoxel (voxel a) 0.25 (fungradient a)
@@ -171,7 +171,7 @@ mainLoop context window anim save snapshots phase = do
   materialDiffuse Front $= fuchsia
   VS.unsafeWith triangles $ 
     \ptr -> unsafeRenderPrimitive Triangles $
-      forM_ [0 .. VS.length triangles `quot` 18] $ 
+      forM_ [0 .. VS.length triangles `quot` 18 - 1] $ 
         \i -> drawTriangle ptr (18 * 8 * i)
   swapBuffers window
   GLFW.pollEvents
@@ -204,7 +204,7 @@ main = do
   diffuse (Light 0) $= white
   specular (Light 0) $= white
   light (Light 1) $= Enabled
-  position (Light 1) $= Vertex4 (-10) (-100) (-100) 1
+  position (Light 1) $= Vertex4 (-100) (-100) (-100) 1
   ambient (Light 1) $= black
   diffuse (Light 1) $= black
   specular (Light 1) $= black
@@ -230,6 +230,7 @@ main = do
         \    To quit, press q.\n\
         \    Scene rotation:\n\
         \        e, r, t, y, u, i\n\
+        \    Phase: k, j\n\
         \    Zoom: l, m\n\
         \    Animation: a\n\
         \    Save animation: s\n\
