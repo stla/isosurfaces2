@@ -33,6 +33,22 @@ jobs:
         run: |
           sudo apt-get install --yes freeglut3-dev
 
+      - name: Install libglfw
+        run: |
+          sudo apt-get install libglfw3-dev
+
+      - name: Install libxinerama
+        run: |
+          sudo apt-get install libxinerama-dev
+
+      - name: Install libxcursor
+        run: |
+          sudo apt-get install libxcursor-dev
+
+      - name: Install libxxf86vm
+        run: |
+          sudo apt-get install libxxf86vm-dev
+
       - uses: freckle/stack-action@v3
 
       - id: stack

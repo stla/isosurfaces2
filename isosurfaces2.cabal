@@ -20,9 +20,12 @@ library
                      , OpenGL.BretzelSmooth
                      , OpenGL.BretzelColored
                      , OpenGL.ICN5D
+                     , OpenGL.ICN5D2
                      , OpenGL.KohnNirenberg
+                     , OpenGL.KohnNirenberg2
                      , OpenGL.Mandelbulb
                      , OpenGL.Orthocircles
+                     , OpenGL.Orthocircles2
                      , OpenGL.Pilz
                      , OpenGL.Pretzel
   other-modules:       Colors.Palettes
@@ -33,6 +36,7 @@ library
                      , containers >= 0.6.4.1
                      , OpenGL >= 3.0.3.0
                      , GLUT >= 2.7.0.16
+                     , GLFW-b >= 3.3.0.0
                      , numeric-tools >= 0.2.0.1
                      , vector-th-unbox >= 0.2.2
                      , gl-capture >= 0.1.0.0

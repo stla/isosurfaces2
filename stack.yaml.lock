@@ -25,6 +25,13 @@ packages:
       size: 678
   original:
     hackage: marching-cubes2-0.1.0.0
+- completed:
+    hackage: hspray-0.1.2.0@sha256:45bacddcb7be1e554bf441f212bcba30e0acd8bccf6837f253674acc47cf7ef9,1853
+    pantry-tree:
+      sha256: 2714d70db1aeee3204806514c28c4f9f931ea466d232123ff5e68d04d4a77dd7
+      size: 373
+  original:
+    hackage: hspray-0.1.2.0
 snapshots:
 - completed:
     sha256: adbc602422dde10cc330175da7de8609e70afc41449a7e2d6e8b1827aa0e5008
